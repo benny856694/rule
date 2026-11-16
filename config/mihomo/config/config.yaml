@@ -548,7 +548,6 @@ rules:
   - DOMAIN-SUFFIX,claude.com,♻️ 美国自动
   - DOMAIN-SUFFIX,claudeusercontent.com,♻️ 美国自动
   # ---------
-  - AND,((RULE-SET,cn!_domain),(DST-PORT,443),(NETWORK,UDP)),REJECT
   - RULE-SET,private_ip,直连,no-resolve
   - RULE-SET,private_domain,直连
   - RULE-SET,ai_domain,🤖 AI
