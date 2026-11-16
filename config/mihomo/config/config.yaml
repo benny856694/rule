@@ -72,6 +72,24 @@ dns:
     - "+.lan"
     - "+.local"
     - "+.market.xiaomi.com"
+    - "guzzoni.apple.com"
+    - "+.guzzoni.apple.com"
+    - "+.siri.apple.com"
+    - "dejavu.apple.com"
+    - "sequoia.apple.com"
+    - "+.smoot.apple.com"
+    - "+.push.apple.com"
+    - "gspe1-ssl.ls.apple.com"
+    - "+.issuer.apple.com"
+    - "+.ropes.apple.com"
+    - "mask-api.icloud.com"
+    - "mask.icloud.com"
+    - "mask-h2.icloud.com"
+    - "+.app.apple.com"
+    - "+.apple-relay.apple.com"
+    - "+.apple-relay.cloudflare.com"
+    - "+.apple-relay.fastly-edge.com"
+    - "+.apple-relay.akamaized.net"
   default-nameserver:
     - 223.5.5.5
   nameserver:
@@ -483,6 +501,53 @@ proxy-groups:
 
 # 规则匹配
 rules:
+  # 1. 中文 Siri 与普通话来电筛选强制直连
+  - DOMAIN-SUFFIX,guzzoni.apple.com,DIRECT
+  - DOMAIN-SUFFIX,siri.apple.com,DIRECT
+  - DOMAIN,dejavu.apple.com,DIRECT
+  - DOMAIN,sequoia.apple.com,DIRECT
+  - DOMAIN-SUFFIX,smoot.apple.com,DIRECT
+  # 2. Apple Intelligence PCC 与区域准入（置顶防 GEOSITE,apple,DIRECT 抢行）
+  - DOMAIN,gspe1-ssl.ls.apple.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,issuer.apple.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,ropes.apple.com,♻️ 美国自动
+  - DOMAIN,mask-api.icloud.com,♻️ 美国自动
+  - DOMAIN,mask.icloud.com,♻️ 美国自动
+  - DOMAIN,mask-h2.icloud.com,♻️ 美国自动
+  - DOMAIN,ss-cleanup-proxy-prod.us-east-1m.app.apple.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,app.apple.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,apple-relay.apple.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,apple-relay.cloudflare.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,apple-relay.fastly-edge.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,apple-relay.akamaized.net,♻️ 美国自动
+  - DOMAIN-SUFFIX,cp4.cloudflare.com,♻️ 美国自动
+  # 3. Siri ChatGPT 扩展与视觉智能
+  - DOMAIN-SUFFIX,openai.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,chatgpt.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,chat.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,sora.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,oaistatic.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,oaiusercontent.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,oaistatsig.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,openai.com.cdn.cloudflare.net,♻️ 美国自动
+  - DOMAIN,openai-api.arkoselabs.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,chatgpt.livekit.cloud,♻️ 美国自动
+  - DOMAIN-SUFFIX,host.livekit.cloud,♻️ 美国自动
+  - DOMAIN-SUFFIX,turn.livekit.cloud,♻️ 美国自动
+  - DOMAIN,lens.google.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,gemini.google.com,♻️ 美国自动
+  - DOMAIN,gemini.gstatic.com,♻️ 美国自动
+  - DOMAIN,generativelanguage.googleapis.com,♻️ 美国自动
+  - DOMAIN,proactivebackend-pa.googleapis.com,♻️ 美国自动
+  - DOMAIN,robinfrontend-pa.googleapis.com,♻️ 美国自动
+  - DOMAIN,aistudio.google.com,♻️ 美国自动
+  - DOMAIN,alkalimakersuite-pa.clients6.google.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,deepmind.google,♻️ 美国自动
+  - DOMAIN-SUFFIX,anthropic.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,claude.ai,♻️ 美国自动
+  - DOMAIN-SUFFIX,claude.com,♻️ 美国自动
+  - DOMAIN-SUFFIX,claudeusercontent.com,♻️ 美国自动
+  # ---------
   - AND,((RULE-SET,cn!_domain),(DST-PORT,443),(NETWORK,UDP)),REJECT
   - RULE-SET,private_ip,直连,no-resolve
   - RULE-SET,private_domain,直连
