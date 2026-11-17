@@ -1,0 +1,72 @@
+name: "AppleFlow · Apple 智能与中文 Siri 分流"
+desc: "零 MitM 极简分流：锁定中文 Siri 与普通话来电筛选真实 IP 直连，将 Apple Intelligence PCC 与 ChatGPT/视觉智能置顶分流至 office（请确保美区节点开启 udp: true）。"
+homepage: "https://kianuni.github.io/AppleFlow/"
+
+dns:
+  fake-ip-filter:
+    - "guzzoni.apple.com"
+    - "+.guzzoni.apple.com"
+    - "+.siri.apple.com"
+    - "dejavu.apple.com"
+    - "sequoia.apple.com"
+    - "+.smoot.apple.com"
+    - "+.push.apple.com"
+    - "gspe1-ssl.ls.apple.com"
+    - "+.issuer.apple.com"
+    - "+.ropes.apple.com"
+    - "mask-api.icloud.com"
+    - "mask.icloud.com"
+    - "mask-h2.icloud.com"
+    - "+.app.apple.com"
+    - "+.apple-relay.apple.com"
+    - "+.apple-relay.cloudflare.com"
+    - "+.apple-relay.fastly-edge.com"
+    - "+.apple-relay.akamaized.net"
+
+rules:
+  # 1. 中文 Siri 与普通话来电筛选强制直连
+  - DOMAIN-SUFFIX,guzzoni.apple.com,DIRECT
+  - DOMAIN-SUFFIX,siri.apple.com,DIRECT
+  - DOMAIN,dejavu.apple.com,DIRECT
+  - DOMAIN,sequoia.apple.com,DIRECT
+  - DOMAIN-SUFFIX,smoot.apple.com,DIRECT
+  # 2. Apple Intelligence PCC 与区域准入（置顶防 GEOSITE,apple,DIRECT 抢行）
+  - DOMAIN,gspe1-ssl.ls.apple.com,office
+  - DOMAIN-SUFFIX,issuer.apple.com,office
+  - DOMAIN-SUFFIX,ropes.apple.com,office
+  - DOMAIN,mask-api.icloud.com,office
+  - DOMAIN,mask.icloud.com,office
+  - DOMAIN,mask-h2.icloud.com,office
+  - DOMAIN,ss-cleanup-proxy-prod.us-east-1m.app.apple.com,office
+  - DOMAIN-SUFFIX,app.apple.com,office
+  - DOMAIN-SUFFIX,apple-relay.apple.com,office
+  - DOMAIN-SUFFIX,apple-relay.cloudflare.com,office
+  - DOMAIN-SUFFIX,apple-relay.fastly-edge.com,office
+  - DOMAIN-SUFFIX,apple-relay.akamaized.net,office
+  - DOMAIN-SUFFIX,cp4.cloudflare.com,office
+  # 3. Siri ChatGPT 扩展与视觉智能
+  - DOMAIN-SUFFIX,openai.com,office
+  - DOMAIN-SUFFIX,chatgpt.com,office
+  - DOMAIN-SUFFIX,chat.com,office
+  - DOMAIN-SUFFIX,sora.com,office
+  - DOMAIN-SUFFIX,oaistatic.com,office
+  - DOMAIN-SUFFIX,oaiusercontent.com,office
+  - DOMAIN-SUFFIX,oaistatsig.com,office
+  - DOMAIN-SUFFIX,openai.com.cdn.cloudflare.net,office
+  - DOMAIN,openai-api.arkoselabs.com,office
+  - DOMAIN-SUFFIX,chatgpt.livekit.cloud,office
+  - DOMAIN-SUFFIX,host.livekit.cloud,office
+  - DOMAIN-SUFFIX,turn.livekit.cloud,office
+  - DOMAIN,lens.google.com,office
+  - DOMAIN-SUFFIX,gemini.google.com,office
+  - DOMAIN,gemini.gstatic.com,office
+  - DOMAIN,generativelanguage.googleapis.com,office
+  - DOMAIN,proactivebackend-pa.googleapis.com,office
+  - DOMAIN,robinfrontend-pa.googleapis.com,office
+  - DOMAIN,aistudio.google.com,office
+  - DOMAIN,alkalimakersuite-pa.clients6.google.com,office
+  - DOMAIN-SUFFIX,deepmind.google,office
+  - DOMAIN-SUFFIX,anthropic.com,office
+  - DOMAIN-SUFFIX,claude.ai,office
+  - DOMAIN-SUFFIX,claude.com,office
+  - DOMAIN-SUFFIX,claudeusercontent.com,office
