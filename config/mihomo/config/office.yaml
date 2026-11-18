@@ -1,9 +1,59 @@
 # 必读！！！
-# 此配置不防DNS泄露，想使用防泄漏专业版本请使用同目录下另一个名字为mihomo的版本
+# mihomo当前版本理论上较完美的分流准确同时防泄露专业版本（nikki，openclash等官方内核的都可以跑），如果用不明白，建议使用config.yaml
+# 因为DNS流程较多，尽可能用本地搭建DNS开启乐观缓存。
+# 因为配置里开启了绕过大陆，google商店会无法更新，可以尝试把 "+.googleapis.cn"  "+.xn--ngstr-lra8j.com" 两个域名后缀指定走国外DNS，同时rules里添加走代理，理论上可以解决，或者关闭绕过大陆。
+rule-anchor:
+  P:
+    &P {
+      type: http,
+      interval: 0,
+      health-check:
+        {
+          enable: true,
+          url: "https://www.gstatic.com/generate_204",
+          interval: 300,
+        },
+      exclude-filter: "官网|剩余|流量|套餐|订阅|直连|到期时间|Expire Date|Traffic|ExpireDate",
+      proxy: 直连,
+    }
+  # 节点选择
+  G1: &G1 { type: select, proxies: ["office"] }
+  S1: &S1 { type: select, proxies: ["office"] }
+  S2: &S2 { type: select, proxies: ["office"] }
+  S3: &S3 { type: select, proxies: ["office"] }
+  S5:
+    &S5 {
+      type: url-test,
+      proxies: [直连, DIRECT],
+      interval: 3600,
+      lazy: true,
+      url: "http://connect.rom.miui.com/generate_204",
+    }
+  # 节点筛选
+  Exclude: &Exclude "^((?!(官网|剩余|流量|套餐|订阅|到期时间|直连|GB|Expire Date|Traffic|ExpireDate)).)*$"
+  # 策略组
+  SD: &SD { type: select, include-all: true }
+  URL:
+    &URL {
+      type: url-test,
+      include-all: true,
+      tolerance: 50,
+      interval: 300,
+      lazy: true,
+      url: "https://www.gstatic.com/generate_204",
+    }
+  # ICON
+  Failover: &Failover "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/failover.png"
+  Auto: &Auto "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/auto.png"
+  All: &All "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/all.png"
+  # 规则集
+  ip: &ip { type: http, interval: 86400, behavior: ipcidr, format: mrs }
+  domain: &domain { type: http, interval: 86400, behavior: domain, format: mrs }
+  domain_text:
+    &domain_text { type: http, interval: 86400, behavior: domain, format: text }
 
-# 节点信息
 proxies:
-  - { name: 直连, type: direct }
+  - { name: 直连, type: direct, udp: true }
   - name: "office"
     type: ss
     server: 127.0.0.1
@@ -11,8 +61,13 @@ proxies:
     cipher: aes-128-gcm
     password: "" #fill password here
     udp: true
-# 全局配置
+
 mixed-port: 7890
+authentication:
+  - "user:passwd"
+skip-auth-prefixes:
+  - 127.0.0.0/8
+  - 192.168.0.0/16
 allow-lan: true
 bind-address: "*"
 ipv6: false
@@ -28,15 +83,34 @@ profile:
 external-controller: 0.0.0.0:9090
 secret: ""
 external-ui: ui
-external-ui-url: "https://gh-proxy.com/https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
+external-ui-name: zashboard
+external-ui-url: "https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip"
 
-# 嗅探
+geox-url:
+  mmdb: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
+
+ntp:
+  enable: true
+  write-to-system: true
+
+tun:
+  enable: true
+  stack: mixed ##如果内核版本大于v1.19.31，此处可以改为自研协议栈 mips ，理论上性能更好。
+  dns-hijack: ["any:53", "tcp://any:53"]
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+  route-exclude-address-set:
+    - cn_ip
+
 sniffer:
   enable: true
+  override-destination: false
+  force-dns-mapping: false
+  parse-pure-ip: true
   sniff:
     HTTP:
       ports: [80, 8080-8880]
-      override-destination: true
     TLS:
       ports: [443, 8443]
     QUIC:
@@ -45,28 +119,43 @@ sniffer:
     - "Mijia Cloud"
     - "+.push.apple.com"
 
-# 入站
-tun:
-  enable: true
-  stack: mixed ##如果内核版本大于v1.19.31，此处可以改为自研协议栈 mips ，理论上性能更好。
-  dns-hijack: ["any:53", "tcp://any:53"]
-  auto-route: true
-  auto-redirect: true
-  auto-detect-interface: true
-
-# DNS模块
 dns:
   enable: true
   cache-algorithm: arc
   ipv6: false
   enhanced-mode: fake-ip
+  fake-ip-ttl: 1
   fake-ip-range: 198.18.0.0/16
   fake-ip-filter-mode: blacklist
+  default-nameserver:
+    - https://223.5.5.5/dns-query
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  direct-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  nameserver-policy:
+    "rule-set:cn_domain,private_domain,fakeipfilter_cn,steamcn_domain,microsoftcn_domain,applecn_domain":
+      - https://dns.alidns.com/dns-query#disable-qtype-65=true
+      - https://doh.pub/dns-query#disable-qtype-65=true
+    "rule-set:fakeipfilter_!cn":
+      - https://8.8.8.8/dns-query#默认代理&disable-qtype-65=true
+  nameserver:
+    - https://8.8.8.8/dns-query#默认代理&ecs=223.5.5.0/24
+  fallback:
+    - https://8.8.8.8/dns-query#默认代理
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
   fake-ip-filter:
-    - "*"
-    - "+.lan"
-    - "+.local"
-    - "+.market.xiaomi.com"
+    - rule-set:fakeipfilter_cn
+    - rule-set:fakeipfilter_!cn
+    - rule-set:private_domain
+    - rule-set:cn_domain
+    - rule-set:microsoftcn_domain
+    - rule-set:applecn_domain
+    - rule-set:steamcn_domain
     - "guzzoni.apple.com"
     - "+.guzzoni.apple.com"
     - "+.siri.apple.com"
@@ -85,160 +174,150 @@ dns:
     - "+.apple-relay.cloudflare.com"
     - "+.apple-relay.fastly-edge.com"
     - "+.apple-relay.akamaized.net"
-  default-nameserver:
-    - 223.5.5.5
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
 
-# 出站策略，根据自己情况调整每个策略里分组排序，增删都可以，比如把美国自动放到第一个，比如删除香港故转，注意别漏掉表情逗号等。
-# 如果相应分组没有筛选到对应的国家，请根据自己节点名字调整筛选关键字。
-# 没有再使用锚点和icon图标，是考虑很多新手修改难度，这样新手修改某个分组更容易些。
 proxy-groups:
-  - { name: 🚀 默认代理, type: select, proxies: ["office"] }
-  - { name: 📹 YouTube, type: select, proxies: ["office"] }
-  - { name: 🍀 Google, type: select, proxies: ["office"] }
-  - { name: 🤖 AI, type: select, proxies: ["office"] }
-  - { name: 👨🏿‍💻 GitHub, type: select, proxies: ["office"] }
-  - { name: 🐬 OneDrive, type: select, proxies: ["office"] }
-  - { name: 🪟 Microsoft, type: select, proxies: ["office"] }
-  - { name: 🎵 TikTok, type: select, proxies: ["office"] }
-  - { name: 📲 Telegram, type: select, proxies: ["office"] }
-  - { name: 🎥 NETFLIX, type: select, proxies: ["office"] }
-  - { name: 💶 Wallet, type: select, proxies: ["office"] }
-  - { name: 🎮 Steam, type: select, proxies: ["office"] }
-  - { name: 🍎 Apple, type: select, proxies: ["office"] }
-  - { name: 🐟 漏网之鱼, type: select, proxies: ["office"] }
-  - { name: 🇭🇰 香港节点, type: select, proxies: ["office"] }
-  - { name: 🇯🇵 日本节点, type: select, proxies: ["office"] }
-  - { name: 🇸🇬 狮城节点, type: select, proxies: ["office"] }
-  - { name: 🇺🇲 美国节点, type: select, proxies: ["office"] }
-  - { name: 🔯 香港故转, type: fallback, proxies: ["office"] }
-  - { name: 🔯 日本故转, type: fallback, proxies: ["office"] }
-  - { name: 🔯 狮城故转, type: fallback, proxies: ["office"] }
-  - { name: 🔯 美国故转, type: fallback, proxies: ["office"] }
   - {
-      name: ♻️ 香港自动,
-      type: url-test,
-      tolerance: 20,
-      interval: 300,
-      proxies: ["office"],
+      name: 默认代理,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/select.png",
     }
   - {
-      name: ♻️ 日本自动,
-      type: url-test,
-      tolerance: 20,
-      interval: 300,
-      proxies: ["office"],
+      name: AI,
+      <<: *S3,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/ai.png",
     }
   - {
-      name: ♻️ 狮城自动,
-      type: url-test,
-      tolerance: 20,
-      interval: 300,
-      proxies: ["office"],
+      name: YouTube,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/youtube.png",
     }
   - {
-      name: ♻️ 美国自动,
-      type: url-test,
-      tolerance: 20,
-      interval: 300,
-      proxies: ["office"],
+      name: Google,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/google.png",
     }
   - {
-      name: ♻️ 自动选择,
-      include-all: true,
-      type: url-test,
-      tolerance: 20,
-      interval: 300,
-      proxies: ["office"],
+      name: GitHub,
+      <<: *S2,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/github.png",
     }
-  - { name: 🌐 全部节点, type: select, include-all: true }
+  - {
+      name: Telegram,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/telegram.png",
+    }
+  - {
+      name: TikTok,
+      <<: *S3,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/douyin.png",
+    }
+  - {
+      name: NETFLIX,
+      <<: *S3,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/netflix.png",
+    }
+  - {
+      name: Wallet,
+      <<: *S3,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/wallet.png",
+    }
+  - {
+      name: Steam,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/steam.png",
+    }
+  - {
+      name: Microsoft,
+      <<: *S2,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/microsoft.png",
+    }
+  - {
+      name: OneDrive,
+      <<: *S2,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/onedrive.png",
+    }
+  - {
+      name: Apple,
+      <<: *S1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/apple.png",
+    }
+  - {
+      name: 漏网之鱼,
+      <<: *G1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/final.png",
+    }
+  - {
+      name: 香港手动,
+      <<: *SD,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/flag/corner/hongkong.png",
+    }
+  - {
+      name: 日本手动,
+      <<: *SD,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/flag/corner/japan.png",
+    }
+  - {
+      name: 台湾手动,
+      <<: *SD,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/flag/corner/taiwan.png",
+    }
+  - {
+      name: 狮城手动,
+      <<: *SD,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/flag/corner/singapore.png",
+    }
+  - {
+      name: 美国手动,
+      <<: *SD,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/flag/corner/usa.png",
+    }
+  - { name: 香港故转, <<: *S1, icon: *Failover }
+  - { name: 日本故转, <<: *S1, icon: *Failover }
+  - { name: 台湾故转, <<: *S1, icon: *Failover }
+  - { name: 狮城故转, <<: *S1, icon: *Failover }
+  - { name: 美国故转, <<: *S1, icon: *Failover }
+  - { name: 香港自动, <<: *S1, icon: *Auto }
+  - { name: 日本自动, <<: *S1, icon: *Auto }
+  - { name: 台湾自动, <<: *S1, icon: *Auto }
+  - { name: 狮城自动, <<: *S1, icon: *Auto }
+  - { name: 美国自动, <<: *S1, icon: *Auto }
+  - { name: 全部手动, <<: *SD, filter: *Exclude, icon: *All }
+  - { name: 全部自动, <<: *URL, filter: *Exclude, icon: *Auto }
+  - { name: 延迟辅助, <<: *S5, icon: *Auto }
+  - {
+      name: GLOBAL,
+      <<: *G1,
+      icon: "https://raw.githubusercontent.com/s0lnce/mofish-icon/refs/heads/main/mihomo/pure/corner/all.png",
+    }
 
-# 规则匹配
 rules:
-  # 1. 中文 Siri 与普通话来电筛选强制直连
-  - DOMAIN-SUFFIX,guzzoni.apple.com,DIRECT
-  - DOMAIN-SUFFIX,siri.apple.com,DIRECT
-  - DOMAIN,dejavu.apple.com,DIRECT
-  - DOMAIN,sequoia.apple.com,DIRECT
-  - DOMAIN-SUFFIX,smoot.apple.com,DIRECT
-  # 2. Apple Intelligence PCC 与区域准入（置顶防 GEOSITE,apple,DIRECT 抢行）
-  - DOMAIN,gspe1-ssl.ls.apple.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,issuer.apple.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,ropes.apple.com,♻️ 美国自动
-  - DOMAIN,mask-api.icloud.com,♻️ 美国自动
-  - DOMAIN,mask.icloud.com,♻️ 美国自动
-  - DOMAIN,mask-h2.icloud.com,♻️ 美国自动
-  - DOMAIN,ss-cleanup-proxy-prod.us-east-1m.app.apple.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,app.apple.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,apple-relay.apple.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,apple-relay.cloudflare.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,apple-relay.fastly-edge.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,apple-relay.akamaized.net,♻️ 美国自动
-  - DOMAIN-SUFFIX,cp4.cloudflare.com,♻️ 美国自动
-  # 3. Siri ChatGPT 扩展与视觉智能
-  - DOMAIN-SUFFIX,openai.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,chatgpt.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,chat.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,sora.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,oaistatic.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,oaiusercontent.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,oaistatsig.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,openai.com.cdn.cloudflare.net,♻️ 美国自动
-  - DOMAIN,openai-api.arkoselabs.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,chatgpt.livekit.cloud,♻️ 美国自动
-  - DOMAIN-SUFFIX,host.livekit.cloud,♻️ 美国自动
-  - DOMAIN-SUFFIX,turn.livekit.cloud,♻️ 美国自动
-  - DOMAIN,lens.google.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,gemini.google.com,♻️ 美国自动
-  - DOMAIN,gemini.gstatic.com,♻️ 美国自动
-  - DOMAIN,generativelanguage.googleapis.com,♻️ 美国自动
-  - DOMAIN,proactivebackend-pa.googleapis.com,♻️ 美国自动
-  - DOMAIN,robinfrontend-pa.googleapis.com,♻️ 美国自动
-  - DOMAIN,aistudio.google.com,♻️ 美国自动
-  - DOMAIN,alkalimakersuite-pa.clients6.google.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,deepmind.google,♻️ 美国自动
-  - DOMAIN-SUFFIX,anthropic.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,claude.ai,♻️ 美国自动
-  - DOMAIN-SUFFIX,claude.com,♻️ 美国自动
-  - DOMAIN-SUFFIX,claudeusercontent.com,♻️ 美国自动
-  # ---------
   - RULE-SET,private_ip,直连,no-resolve
   - RULE-SET,private_domain,直连
-  - RULE-SET,ai_domain,🤖 AI
-  - RULE-SET,youtube_domain,📹 YouTube
-  - RULE-SET,google_domain,🍀 Google
-  - RULE-SET,github_domain,👨🏿‍💻 GitHub
-  - RULE-SET,onedrive_domain,🐬 OneDrive
+  - RULE-SET,ai_domain,AI
+  - RULE-SET,youtube_domain,YouTube
+  - RULE-SET,google_domain,Google
+  - RULE-SET,github_domain,GitHub
+  - RULE-SET,onedrive_domain,OneDrive
   - RULE-SET,microsoftcn_domain,直连
-  - RULE-SET,microsoft_domain,🪟 Microsoft
+  - RULE-SET,microsoft_domain,Microsoft
   - RULE-SET,applecn_domain,直连
-  - RULE-SET,apple_domain,🍎 Apple
-  - RULE-SET,telegram_domain,📲 Telegram
-  - RULE-SET,tiktok_domain,🎵 TikTok
-  - RULE-SET,netflix_domain,🎥 NETFLIX
-  - RULE-SET,paypal_domain,💶 Wallet
-  - RULE-SET,binance_domain,💶 Wallet
-  - RULE-SET,okx_domain,💶 Wallet
-  - RULE-SET,usd_domain,💶 Wallet
+  - RULE-SET,apple_domain,Apple
+  - RULE-SET,telegram_domain,Telegram
+  - RULE-SET,tiktok_domain,TikTok
+  - RULE-SET,netflix_domain,NETFLIX
+  - RULE-SET,paypal_domain,Wallet
+  - RULE-SET,binance_domain,Wallet
+  - RULE-SET,okx_domain,Wallet
+  - RULE-SET,usd_domain,Wallet
   - RULE-SET,steamcn_domain,直连
-  - RULE-SET,steam_domain,🎮 Steam
-  - RULE-SET,cn!_domain,🚀 默认代理
-  - RULE-SET,google_ip,🍀 Google
-  - RULE-SET,apple_ip,🍎 Apple
-  - RULE-SET,telegram_ip,📲 Telegram
-  - RULE-SET,netflix_ip,🎥 NETFLIX
+  - RULE-SET,steam_domain,Steam
+  - RULE-SET,cn!_domain,默认代理
+  - RULE-SET,google_ip,Google
+  - RULE-SET,apple_ip,Apple
+  - RULE-SET,telegram_ip,Telegram
+  - RULE-SET,netflix_ip,NETFLIX
   - RULE-SET,cn_ip,直连
-  - MATCH,🐟 漏网之鱼
-
-# 规则集
-## type：可选http/file/inline  behavior：可选domain/ipcidr/classical format：可选yaml/text/mrs
-rule-anchor:
-  ip: &ip { type: http, interval: 86400, behavior: ipcidr, format: mrs }
-  domain: &domain { type: http, interval: 86400, behavior: domain, format: mrs }
-  domain_text:
-    &domain_text { type: http, interval: 86400, behavior: domain, format: text }
+  - MATCH,漏网之鱼
 
 rule-providers:
   fakeipfilter_cn:
