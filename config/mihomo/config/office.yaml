@@ -120,37 +120,38 @@ proxy-groups:
   - {
       name: ♻️ 香港自动,
       type: url-test,
-      include-all: true,
       tolerance: 20,
       interval: 300,
+      proxies: ["office"],
     }
   - {
       name: ♻️ 日本自动,
       type: url-test,
-      include-all: true,
       tolerance: 20,
       interval: 300,
+      proxies: ["office"],
     }
   - {
       name: ♻️ 狮城自动,
       type: url-test,
-      include-all: true,
       tolerance: 20,
       interval: 300,
+      proxies: ["office"],
     }
   - {
       name: ♻️ 美国自动,
       type: url-test,
-      include-all: true,
       tolerance: 20,
       interval: 300,
+      proxies: ["office"],
     }
   - {
       name: ♻️ 自动选择,
-      type: url-test,
       include-all: true,
+      type: url-test,
       tolerance: 20,
       interval: 300,
+      proxies: ["office"],
     }
   - { name: 🌐 全部节点, type: select, include-all: true }
 
